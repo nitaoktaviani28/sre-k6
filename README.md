@@ -80,6 +80,13 @@ docker run -p 5500:80 perpustakaan-frontend
 | Admin  | admin@perpus.id   | admin123  |
 | Member | budi@perpus.id    | budi123   |
 
+## CI/CD Pipeline
+
+Repo ini memiliki GitHub Actions pipeline (`.github/workflows/ci-cd.yml`) yang
+otomatis **build → push image ke Docker registry → deploy ke VM** setiap ada
+push ke `main`. Lihat dokumentasi lengkap & daftar variable yang perlu
+dikonfigurasi di [`docs/CI-CD.md`](docs/CI-CD.md).
+
 ## Teknologi
 
 - **Backend:** Node.js (modul bawaan `http`, `crypto`, `url` — tanpa framework/dependency eksternal)
