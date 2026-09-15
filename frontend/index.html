@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Katalog Buku - Perpustakaan Digital</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <div id="navbar" class="navbar"></div>
+
+  <div class="container">
+    <div class="page-header">
+      <h1>Katalog Buku</h1>
+      <p>Jelajahi koleksi buku perpustakaan dan pinjam buku favorit Anda.</p>
+    </div>
+
+    <div class="alert alert-error" id="errorAlert"></div>
+    <div class="alert alert-success" id="successAlert"></div>
+
+    <div class="toolbar">
+      <input type="text" class="form-input" id="searchInput" placeholder="Cari judul atau penulis..." />
+      <select class="form-select" id="categorySelect">
+        <option value="">Semua Kategori</option>
+      </select>
+      <div class="toolbar-spacer"></div>
+    </div>
+
+    <div id="bookGrid" class="book-grid"></div>
+    <div id="emptyState" class="empty-state hidden">
+      <div class="icon">📭</div>
+      <p>Tidak ada buku yang ditemukan.</p>
+    </div>
+    <div class="toolbar" id="pagination" style="justify-content:center;"></div>
+  </div>
+
+  <div class="footer">Perpustakaan Digital &middot; Dibangun dengan Node.js &amp; JavaScript murni</div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/nav.js"></script>
+  <script>
+    renderNavbar('index');
+
+    const bookGrid = document.getElementById('bookGrid');
+    const emptyState = document.getElementById('emptyState');
+    const errorAlert = document.getElementById('errorAlert');
+    const successAlert = document.getElementById('successAlert');
+    const searchInput = document.getElementById('searchInput');
+    const categorySelect = document.getElementById('categorySelect');
+    const pagination = document.getElementById('pagination');
+
+    let currentPage = 1;
+    let searchTimer = null;
+
+    function showError(message) {
+      errorAlert.textContent = message;
+      errorAlert.classList.add('show');
+      setTimeout(() => errorAlert.classList.remove('show'), 4000);
+    }
+
+    function showSuccess(message) {
+      successAlert.textContent = message;
+      successAlert.classList.add('show');
+      setTimeout(() => successAlert.classList.remove('show'), 3000);
+    }
+
+    async function loadCategories() {
+      try {
+        const categories = await Api.listCategories();
+        categories.forEach((c) => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = `${c.name} (${c.bookCount})`;
+          categorySelect.appendChild(opt);
+        });
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    function renderBooks(items) {
+      bookGrid.innerHTML = '';
+      emptyState.classList.toggle('hidden', items.length > 0);
+
+      items.forEach((book) => {
+        const card = document.createElement('div');
+        card.className = 'book-card';
+        const available = book.stock > 0;
+        card.innerHTML = `
+          <div class="book-cover">📖</div>
+          <span class="book-category">${escapeHtml(book.categoryName || 'Umum')}</span>
+          <h3 class="book-title">${escapeHtml(book.title)}</h3>
+          <p class="book-author">${escapeHtml(book.author)} ${book.year ? `&middot; ${book.year}` : ''}</p>
+          <p class="book-synopsis">${escapeHtml(book.synopsis || '')}</p>
+          <div class="book-footer">
+            <span class="stock-badge ${available ? 'available' : 'unavailable'}">
+              ${available ? `Tersedia (${book.stock})` : 'Stok habis'}
+            </span>
+            <button class="btn btn-primary btn-sm borrow-btn" data-id="${book.id}" ${
+              available ? '' : 'disabled'
+            }>Pinjam</button>
+          </div>
+        `;
+        bookGrid.appendChild(card);
+      });
+
+      document.querySelectorAll('.borrow-btn').forEach((btn) => {
+        btn.addEventListener('click', () => borrowBook(Number(btn.dataset.id)));
+      });
+    }
+
+    function renderPagination(meta) {
+      pagination.innerHTML = '';
+      if (meta.totalPages <= 1) return;
+
+      const prev = document.createElement('button');
+      prev.className = 'btn btn-outline btn-sm';
+      prev.textContent = '← Sebelumnya';
+      prev.disabled = meta.page <= 1;
+      prev.addEventListener('click', () => {
+        currentPage -= 1;
+        loadBooks();
+      });
+
+      const info = document.createElement('span');
+      info.className = 'text-muted';
+      info.style.padding = '0 10px';
+      info.textContent = `Halaman ${meta.page} dari ${meta.totalPages}`;
+
+      const next = document.createElement('button');
+      next.className = 'btn btn-outline btn-sm';
+      next.textContent = 'Berikutnya →';
+      next.disabled = meta.page >= meta.totalPages;
+      next.addEventListener('click', () => {
+        currentPage += 1;
+        loadBooks();
+      });
+
+      pagination.append(prev, info, next);
+    }
+
+    async function loadBooks() {
+      try {
+        const { items, pagination: meta } = await Api.listBooks({
+          search: searchInput.value.trim(),
+          categoryId: categorySelect.value,
+          page: currentPage,
+          pageSize: 8,
+        });
+        renderBooks(items);
+        renderPagination(meta);
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    async function borrowBook(bookId) {
+      if (!Auth.isLoggedIn()) {
+        window.location.href = 'login.html';
+        return;
+      }
+      try {
+        await Api.borrowBook(bookId);
+        showSuccess('Buku berhasil dipinjam! Batas waktu 7 hari.');
+        loadBooks();
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        currentPage = 1;
+        loadBooks();
+      }, 350);
+    });
+
+    categorySelect.addEventListener('change', () => {
+      currentPage = 1;
+      loadBooks();
+    });
+
+    loadCategories();
+    loadBooks();
+  </script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Masuk - Perpustakaan Digital</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <div class="center-screen">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <span class="brand-badge">📚</span>
+        <h1>Perpustakaan Digital</h1>
+        <p>Masuk untuk meminjam buku dan mengelola akun Anda</p>
+      </div>
+
+      <div class="alert alert-error" id="errorAlert"></div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label class="form-label" for="email">Email</label>
+          <input type="email" id="email" class="form-input" placeholder="nama@email.com" required autocomplete="username" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input type="password" id="password" class="form-input" placeholder="Masukkan password" required autocomplete="current-password" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="loginBtn">Masuk</button>
+      </form>
+
+      <p class="form-hint text-center" style="margin-top:18px;">
+        Belum punya akun? <a href="register.html">Daftar di sini</a>
+      </p>
+
+      <div class="form-hint" style="margin-top:20px; padding-top:16px; border-top:1px solid var(--color-border);">
+        <strong>Akun demo:</strong><br />
+        Admin — admin@perpus.id / admin123<br />
+        Anggota — budi@perpus.id / budi123
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script>
+    if (Auth.isLoggedIn()) {
+      window.location.href = 'index.html';
+    }
+
+    const form = document.getElementById('loginForm');
+    const errorAlert = document.getElementById('errorAlert');
+    const loginBtn = document.getElementById('loginBtn');
+
+    function showError(message) {
+      errorAlert.textContent = message;
+      errorAlert.classList.add('show');
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorAlert.classList.remove('show');
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'Memproses...';
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      try {
+        const { token, user } = await Api.login({ email, password });
+        Auth.setSession(token, user);
+        window.location.href = 'index.html';
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Masuk';
+      }
+    });
+  </script>
+</body>
+</html>
