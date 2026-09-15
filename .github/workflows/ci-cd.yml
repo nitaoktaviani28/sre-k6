@@ -25,24 +25,24 @@ jobs:
       - name: Build Backend
         run: |
           docker build \
-            -t ${{ secrets.DOCKER_USERNAME }}/perpustakaan-backend:v1 \
+            -t haechanlovelove/perpustakaan-backend:v1 \
             ./backend
 
       - name: Push Backend
         run: |
           docker push \
-            ${{ secrets.DOCKER_USERNAME }}/perpustakaan-backend:v1
+            haechanlovelove/perpustakaan-backend:v1
 
       - name: Build Frontend
         run: |
           docker build \
-            -t ${{ secrets.DOCKER_USERNAME }}/perpustakaan-frontend:v1 \
+            -t haechanlovelove/perpustakaan-frontend:v1 \
             ./frontend
 
       - name: Push Frontend
         run: |
           docker push \
-            ${{ secrets.DOCKER_USERNAME }}/perpustakaan-frontend:v1
+            haechanlovelove/perpustakaan-frontend:v1
 
 
   deploy:
@@ -52,7 +52,20 @@ jobs:
 
     steps:
 
-      - name: Deploy
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy docker-compose.prod.yml ke VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.VM_SSH_PORT || 22 }}
+          source: "docker-compose.prod.yml"
+          target: "/opt/perpustakaan-digital"
+
+      - name: Deploy ke VM
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VM_HOST }}
@@ -66,12 +79,15 @@ jobs:
             cd /opt/perpustakaan-digital
 
             echo "Pull backend..."
-            docker pull ${{ secrets.DOCKER_USERNAME }}/perpustakaan-backend:v1
+            docker pull haechanlovelove/perpustakaan-backend:v1
 
             echo "Pull frontend..."
-            docker pull ${{ secrets.DOCKER_USERNAME }}/perpustakaan-frontend:v1
+            docker pull haechanlovelove/perpustakaan-frontend:v1
 
             echo "Start application..."
             docker compose -f docker-compose.prod.yml up -d
+
+            echo "Checking container..."
+            docker ps
 
             echo "Deploy v1 berhasil!"
