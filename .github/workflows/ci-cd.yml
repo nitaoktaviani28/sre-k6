@@ -1,179 +1,69 @@
-name: CI/CD - Build, Push, Deploy
-
-# ---------------------------------------------------------------------------
-# Pipeline Perpustakaan Digital
-#
-# Alur:
-#   1. build       -> build Docker image backend & frontend
-#   2. push        -> push image ke Docker registry (hanya saat push ke main)
-#   3. deploy      -> SSH ke VM tujuan, pull image terbaru, `docker compose up -d`
-#
-# Nama image backend & frontend serta path deploy di VM di-hardcode langsung
-# di file ini (lihat blok `env:` di bawah). Tag image memakai `github.sha`
-# sehingga setiap build menghasilkan tag baru yang unik (image tidak pernah
-# tertimpa secara ambigu, dan VM selalu deploy versi yang sesuai commit).
-#
-# Kredensial memakai GitHub Actions VARIABLES (Settings > Secrets and
-# variables > Actions > Variables), BUKAN Secrets. Ini dipilih sesuai
-# permintaan agar mudah diisi & diubah, namun perlu diperhatikan:
-#
-#   ⚠️  Variables bersifat TIDAK terenkripsi dan bisa terlihat di log workflow
-#       jika di-echo. Untuk data sensitif seperti password registry atau
-#       private key SSH, sangat disarankan memindahkannya ke GitHub
-#       **Secrets** (Settings > Secrets and variables > Actions > Secrets)
-#       agar nilainya di-mask otomatis di log dan tidak terekspos.
-#
-# Variables yang perlu dibuat di GitHub repo (Settings > Secrets and
-# variables > Actions > Variables):
-#   DOCKER_REGISTRY         contoh: docker.io  (atau ghcr.io)
-#   DOCKER_USERNAME         username akun registry
-#   DOCKER_PASSWORD         password / access token akun registry
-#   VM_HOST                 alamat IP / hostname VM tujuan deploy
-#   VM_USER                 username SSH di VM
-#   VM_SSH_PRIVATE_KEY      private key SSH (format PEM) untuk login ke VM
-#   VM_SSH_PORT             (opsional) port SSH, default 22
-# ---------------------------------------------------------------------------
+name: CI/CD
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  workflow_dispatch: {}
-
-permissions:
-  contents: read
-
-env:
-  # Nama image di-hardcode di sini. Ganti "namauser" sesuai akun registry Anda.
-  IMAGE_BACKEND: namauser/perpustakaan-backend
-  IMAGE_FRONTEND: namauser/perpustakaan-frontend
-  # Path direktori di VM tempat docker-compose.prod.yml disimpan & dijalankan.
-  VM_DEPLOY_PATH: /opt/perpustakaan-digital
+    branches:
+      - main
 
 jobs:
-  build:
-    name: Build Docker Images
+
+  build-push:
+    name: Build & Push Docker Image
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout kode
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build image backend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          file: ./backend/Dockerfile
-          push: false
-          tags: perpustakaan-backend:ci
-          load: true
-
-      - name: Build image frontend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
-          push: false
-          tags: perpustakaan-frontend:ci
-          load: true
-
-      - name: Smoke test - backend health check
-        run: |
-          docker run -d --name backend-ci -p 4000:4000 perpustakaan-backend:ci
-          for i in $(seq 1 10); do
-            if curl -sf http://localhost:4000/api/health; then
-              echo "Backend sehat"
-              break
-            fi
-            echo "Menunggu backend siap... ($i)"
-            sleep 2
-          done
-          curl -sf http://localhost:4000/api/health
-          docker logs backend-ci
-          docker stop backend-ci
-          docker rm backend-ci
-
-  push:
-    name: Push Images to Registry
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - name: Checkout kode
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login ke Docker Registry
+      - name: Login Docker Hub
         uses: docker/login-action@v3
         with:
-          registry: ${{ vars.DOCKER_REGISTRY }}
           username: ${{ vars.DOCKER_USERNAME }}
           password: ${{ vars.DOCKER_PASSWORD }}
 
-      - name: Build & push image backend (tag: sha)
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          file: ./backend/Dockerfile
-          push: true
-          tags: ${{ vars.DOCKER_REGISTRY }}/${{ env.IMAGE_BACKEND }}:${{ github.sha }}
+      - name: Build Backend
+        run: |
+          docker build \
+            -t ${{ vars.DOCKER_USERNAME }}/perpustakaan-backend:v1 \
+            ./backend
 
-      - name: Build & push image frontend (tag: sha)
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
-          push: true
-          tags: ${{ vars.DOCKER_REGISTRY }}/${{ env.IMAGE_FRONTEND }}:${{ github.sha }}
+      - name: Push Backend
+        run: |
+          docker push \
+            ${{ vars.DOCKER_USERNAME }}/perpustakaan-backend:v1
+
+      - name: Build Frontend
+        run: |
+          docker build \
+            -t ${{ vars.DOCKER_USERNAME }}/perpustakaan-frontend:v1 \
+            ./frontend
+
+      - name: Push Frontend
+        run: |
+          docker push \
+            ${{ vars.DOCKER_USERNAME }}/perpustakaan-frontend:v1
+
 
   deploy:
     name: Deploy to VM
-    needs: push
+    needs: build-push
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
     steps:
-      - name: Checkout kode
-        uses: actions/checkout@v4
-
-      - name: Copy docker-compose.prod.yml ke VM
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ vars.VM_HOST }}
-          username: ${{ vars.VM_USER }}
-          key: ${{ vars.VM_SSH_PRIVATE_KEY }}
-          port: ${{ vars.VM_SSH_PORT || 22 }}
-          source: "docker-compose.prod.yml"
-          target: ${{ env.VM_DEPLOY_PATH }}
-          strip_components: 0
-
-      - name: Deploy - pull image versi commit ini & restart container
+      - name: Deploy
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ vars.VM_HOST }}
           username: ${{ vars.VM_USER }}
           key: ${{ vars.VM_SSH_PRIVATE_KEY }}
           port: ${{ vars.VM_SSH_PORT || 22 }}
+
           script: |
-            set -e
-            cd "${{ env.VM_DEPLOY_PATH }}"
+            cd /opt/perpustakaan-digital
 
-            # Tulis ulang file .env dengan tag image sesuai commit SHA saat ini
-            cat > .env <<EOF
-            DOCKER_REGISTRY=${{ vars.DOCKER_REGISTRY }}
-            DOCKER_IMAGE_BACKEND=${{ env.IMAGE_BACKEND }}
-            DOCKER_IMAGE_FRONTEND=${{ env.IMAGE_FRONTEND }}
-            IMAGE_TAG=${{ github.sha }}
-            EOF
+            docker pull ${{ vars.DOCKER_USERNAME }}/perpustakaan-backend:v1
+            docker pull ${{ vars.DOCKER_USERNAME }}/perpustakaan-frontend:v1
 
-            # Login ke registry supaya bisa pull image (kalau registry privat)
-            echo "${{ vars.DOCKER_PASSWORD }}" | docker login ${{ vars.DOCKER_REGISTRY }} \
-              -u "${{ vars.DOCKER_USERNAME }}" --password-stdin
+            docker compose -f docker-compose.prod.yml up -d
 
-            docker compose -f docker-compose.prod.yml --env-file .env pull
-            docker compose -f docker-compose.prod.yml --env-file .env up -d --remove-orphans
-            docker image prune -f
+            echo "Deploy v1 berhasil!"
