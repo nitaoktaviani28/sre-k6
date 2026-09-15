@@ -1,21 +1,27 @@
-version: "3.9"
-
 services:
 
   backend:
     image: haechanlovelove/perpustakaan-backend:v1
     container_name: perpustakaan-backend
+
     ports:
       - "4000:4000"
+
     environment:
-      - PORT=4000
+      PORT: 4000
+      NODE_ENV: production
+
     restart: unless-stopped
+
 
   frontend:
     image: haechanlovelove/perpustakaan-frontend:v1
     container_name: perpustakaan-frontend
+
     ports:
       - "5500:80"
+
     depends_on:
       - backend
+
     restart: unless-stopped
