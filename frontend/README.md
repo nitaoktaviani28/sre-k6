@@ -18,6 +18,18 @@ python3 -m http.server 5500
 
 Lalu buka `http://localhost:5500` (atau port yang ditampilkan) di browser.
 
+### Menjalankan dengan Docker
+
+```bash
+cd frontend
+docker build -t perpustakaan-frontend .
+docker run -p 5500:80 perpustakaan-frontend
+```
+
+Frontend akan disajikan oleh Nginx di `http://localhost:5500`. Lihat juga
+`docker-compose.yml` di root repo untuk menjalankan frontend & backend
+sekaligus.
+
 > Pastikan **backend** sudah berjalan di `http://localhost:4000` (lihat
 > `../backend/README.md`). Jika backend berjalan di host/port lain, jalankan
 > baris berikut di console browser sebelum memuat halaman, atau ubah

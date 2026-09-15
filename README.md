@@ -29,6 +29,8 @@ Lihat masing-masing README untuk detail cara menjalankan:
 
 ## Menjalankan Cepat (Quick Start)
 
+### Opsi 1 — Tanpa Docker
+
 Buka **dua terminal**:
 
 **Terminal 1 — Backend**
@@ -43,6 +45,32 @@ node src/server.js
 cd frontend
 python3 -m http.server 5500
 # Buka http://localhost:5500/login.html
+```
+
+### Opsi 2 — Dengan Docker
+
+Setiap aplikasi (backend & frontend) memiliki `Dockerfile` masing-masing, dan
+tersedia `docker-compose.yml` di root untuk menjalankan keduanya sekaligus.
+
+```bash
+docker compose up --build
+```
+
+- Backend API: `http://localhost:4000`
+- Frontend: `http://localhost:5500/login.html`
+
+Atau jalankan masing-masing secara manual:
+
+```bash
+# Backend
+cd backend
+docker build -t perpustakaan-backend .
+docker run -p 4000:4000 perpustakaan-backend
+
+# Frontend
+cd frontend
+docker build -t perpustakaan-frontend .
+docker run -p 5500:80 perpustakaan-frontend
 ```
 
 ## Akun Demo
