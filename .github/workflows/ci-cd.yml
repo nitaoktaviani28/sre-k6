@@ -12,36 +12,37 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Login Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ vars.DOCKER_USERNAME }}
-          password: ${{ vars.DOCKER_PASSWORD }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build Backend
         run: |
           docker build \
-            -t ${{ vars.DOCKER_USERNAME }}/perpustakaan-backend:v1 \
+            -t ${{ secrets.DOCKER_USERNAME }}/perpustakaan-backend:v1 \
             ./backend
 
       - name: Push Backend
         run: |
           docker push \
-            ${{ vars.DOCKER_USERNAME }}/perpustakaan-backend:v1
+            ${{ secrets.DOCKER_USERNAME }}/perpustakaan-backend:v1
 
       - name: Build Frontend
         run: |
           docker build \
-            -t ${{ vars.DOCKER_USERNAME }}/perpustakaan-frontend:v1 \
+            -t ${{ secrets.DOCKER_USERNAME }}/perpustakaan-frontend:v1 \
             ./frontend
 
       - name: Push Frontend
         run: |
           docker push \
-            ${{ vars.DOCKER_USERNAME }}/perpustakaan-frontend:v1
+            ${{ secrets.DOCKER_USERNAME }}/perpustakaan-frontend:v1
 
 
   deploy:
@@ -50,20 +51,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Deploy
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ vars.VM_HOST }}
-          username: ${{ vars.VM_USER }}
-          key: ${{ vars.VM_SSH_PRIVATE_KEY }}
-          port: ${{ vars.VM_SSH_PORT || 22 }}
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.VM_SSH_PORT || 22 }}
 
           script: |
+            set -e
+
             cd /opt/perpustakaan-digital
 
-            docker pull ${{ vars.DOCKER_USERNAME }}/perpustakaan-backend:v1
-            docker pull ${{ vars.DOCKER_USERNAME }}/perpustakaan-frontend:v1
+            echo "Pull backend..."
+            docker pull ${{ secrets.DOCKER_USERNAME }}/perpustakaan-backend:v1
 
+            echo "Pull frontend..."
+            docker pull ${{ secrets.DOCKER_USERNAME }}/perpustakaan-frontend:v1
+
+            echo "Start application..."
             docker compose -f docker-compose.prod.yml up -d
 
             echo "Deploy v1 berhasil!"
