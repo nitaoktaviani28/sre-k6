@@ -18,7 +18,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     image: perpustakaan-frontend:latest
-    container_name: perpustakaan-frontend
+    container_name: perpustakaan-frontend 
     ports:
       - "5500:80"
     depends_on:
