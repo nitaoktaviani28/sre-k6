@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kelola Data - Perpustakaan Digital</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <div id="navbar" class="navbar"></div>
+
+  <div class="container">
+    <div class="page-header">
+      <h1>Kelola Data Perpustakaan</h1>
+      <p>Panel admin untuk mengelola buku, kategori, dan memantau peminjaman.</p>
+    </div>
+
+    <div class="alert alert-error" id="errorAlert"></div>
+    <div class="alert alert-success" id="successAlert"></div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="books">Buku</button>
+      <button class="tab-btn" data-tab="categories">Kategori</button>
+      <button class="tab-btn" data-tab="loans">Semua Peminjaman</button>
+    </div>
+
+    <!-- ============ TAB: BUKU ============ -->
+    <div id="tab-books" class="tab-content">
+      <div class="toolbar">
+        <div class="toolbar-spacer"></div>
+        <button class="btn btn-primary" id="addBookBtn">+ Tambah Buku</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Judul</th>
+              <th>Penulis</th>
+              <th>Kategori</th>
+              <th>Tahun</th>
+              <th>Stok</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="booksBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============ TAB: KATEGORI ============ -->
+    <div id="tab-categories" class="tab-content hidden">
+      <div class="toolbar">
+        <input type="text" class="form-input" id="newCategoryInput" placeholder="Nama kategori baru..." />
+        <button class="btn btn-primary" id="addCategoryBtn">+ Tambah Kategori</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nama Kategori</th>
+              <th>Jumlah Buku</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="categoriesBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============ TAB: PEMINJAMAN ============ -->
+    <div id="tab-loans" class="tab-content hidden">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Buku</th>
+              <th>Peminjam</th>
+              <th>Tgl Pinjam</th>
+              <th>Batas Kembali</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="loansBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: TAMBAH/EDIT BUKU ============ -->
+  <div class="modal-overlay" id="bookModal">
+    <div class="modal">
+      <h2 id="bookModalTitle">Tambah Buku</h2>
+      <form id="bookForm">
+        <input type="hidden" id="bookId" />
+        <div class="form-group">
+          <label class="form-label">Judul Buku</label>
+          <input type="text" id="bookTitle" class="form-input" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Penulis</label>
+          <input type="text" id="bookAuthor" class="form-input" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kategori</label>
+          <select id="bookCategory" class="form-select" required></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tahun Terbit</label>
+          <input type="number" id="bookYear" class="form-input" min="1900" max="2100" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Stok</label>
+          <input type="number" id="bookStock" class="form-input" min="0" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sinopsis</label>
+          <textarea id="bookSynopsis" class="form-textarea"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" id="cancelBookBtn">Batal</button>
+          <button type="submit" class="btn btn-primary" id="saveBookBtn">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="footer">Perpustakaan Digital &middot; Dibangun dengan Node.js &amp; JavaScript murni</div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/nav.js"></script>
+  <script>
+    Auth.requireAdmin();
+    renderNavbar('admin');
+
+    const errorAlert = document.getElementById('errorAlert');
+    const successAlert = document.getElementById('successAlert');
+
+    function showError(message) {
+      errorAlert.textContent = message;
+      errorAlert.classList.add('show');
+      setTimeout(() => errorAlert.classList.remove('show'), 4000);
+    }
+    function showSuccess(message) {
+      successAlert.textContent = message;
+      successAlert.classList.add('show');
+      setTimeout(() => successAlert.classList.remove('show'), 3000);
+    }
+    function formatDate(iso) {
+      if (!iso) return '-';
+      return new Date(iso).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    // ---------------- Tabs ----------------
+    document.querySelectorAll('.tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach((c) => c.classList.add('hidden'));
+        btn.classList.add('active');
+        document.getElementById(`tab-${btn.dataset.tab}`).classList.remove('hidden');
+        if (btn.dataset.tab === 'loans') loadLoans();
+      });
+    });
+
+    // ---------------- Kategori ----------------
+    let categoriesCache = [];
+
+    async function loadCategories() {
+      try {
+        categoriesCache = await Api.listCategories();
+        renderCategoriesTable();
+        renderCategoryOptions();
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    function renderCategoriesTable() {
+      const body = document.getElementById('categoriesBody');
+      body.innerHTML = '';
+      categoriesCache.forEach((c) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${escapeHtml(c.name)}</td>
+          <td>${c.bookCount}</td>
+          <td><button class="btn btn-danger btn-sm del-cat-btn" data-id="${c.id}">Hapus</button></td>
+        `;
+        body.appendChild(tr);
+      });
+      document.querySelectorAll('.del-cat-btn').forEach((btn) => {
+        btn.addEventListener('click', () => deleteCategory(Number(btn.dataset.id)));
+      });
+    }
+
+    function renderCategoryOptions() {
+      const select = document.getElementById('bookCategory');
+      select.innerHTML = categoriesCache
+        .map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`)
+        .join('');
+    }
+
+    document.getElementById('addCategoryBtn').addEventListener('click', async () => {
+      const input = document.getElementById('newCategoryInput');
+      const name = input.value.trim();
+      if (!name) return;
+      try {
+        await Api.createCategory({ name });
+        input.value = '';
+        showSuccess('Kategori ditambahkan');
+        loadCategories();
+      } catch (err) {
+        showError(err.message);
+      }
+    });
+
+    async function deleteCategory(id) {
+      if (!confirm('Hapus kategori ini?')) return;
+      try {
+        await Api.deleteCategory(id);
+        showSuccess('Kategori dihapus');
+        loadCategories();
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    // ---------------- Buku ----------------
+    async function loadBooks() {
+      try {
+        const { items } = await Api.listBooks({ pageSize: 50 });
+        const body = document.getElementById('booksBody');
+        body.innerHTML = '';
+        items.forEach((b) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${escapeHtml(b.title)}</td>
+            <td>${escapeHtml(b.author)}</td>
+            <td>${escapeHtml(b.categoryName || '-')}</td>
+            <td>${b.year || '-'}</td>
+            <td>${b.stock} / ${b.totalStock}</td>
+            <td class="flex gap-8">
+              <button class="btn btn-outline btn-sm edit-book-btn" data-id="${b.id}">Edit</button>
+              <button class="btn btn-danger btn-sm del-book-btn" data-id="${b.id}">Hapus</button>
+            </td>
+          `;
+          body.appendChild(tr);
+        });
+        document.querySelectorAll('.edit-book-btn').forEach((btn) => {
+          btn.addEventListener('click', () => openBookModal(Number(btn.dataset.id)));
+        });
+        document.querySelectorAll('.del-book-btn').forEach((btn) => {
+          btn.addEventListener('click', () => deleteBook(Number(btn.dataset.id)));
+        });
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    const bookModal = document.getElementById('bookModal');
+    const bookForm = document.getElementById('bookForm');
+
+    document.getElementById('addBookBtn').addEventListener('click', () => openBookModal(null));
+    document.getElementById('cancelBookBtn').addEventListener('click', closeBookModal);
+
+    async function openBookModal(id) {
+      document.getElementById('bookModalTitle').textContent = id ? 'Edit Buku' : 'Tambah Buku';
+      bookForm.reset();
+      document.getElementById('bookId').value = id || '';
+
+      if (id) {
+        try {
+          const book = await Api.getBook(id);
+          document.getElementById('bookTitle').value = book.title;
+          document.getElementById('bookAuthor').value = book.author;
+          document.getElementById('bookCategory').value = book.categoryId;
+          document.getElementById('bookYear').value = book.year || '';
+          document.getElementById('bookStock').value = book.totalStock;
+          document.getElementById('bookSynopsis').value = book.synopsis || '';
+        } catch (err) {
+          showError(err.message);
+          return;
+        }
+      }
+
+      bookModal.classList.add('show');
+    }
+
+    function closeBookModal() {
+      bookModal.classList.remove('show');
+    }
+
+    bookForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('bookId').value;
+      const payload = {
+        title: document.getElementById('bookTitle').value.trim(),
+        author: document.getElementById('bookAuthor').value.trim(),
+        categoryId: Number(document.getElementById('bookCategory').value),
+        year: document.getElementById('bookYear').value || undefined,
+        stock: Number(document.getElementById('bookStock').value),
+        synopsis: document.getElementById('bookSynopsis').value.trim(),
+      };
+
+      try {
+        if (id) {
+          await Api.updateBook(Number(id), payload);
+          showSuccess('Buku diperbarui');
+        } else {
+          await Api.createBook(payload);
+          showSuccess('Buku ditambahkan');
+        }
+        closeBookModal();
+        loadBooks();
+        loadCategories();
+      } catch (err) {
+        showError(err.message);
+      }
+    });
+
+    async function deleteBook(id) {
+      if (!confirm('Hapus buku ini?')) return;
+      try {
+        await Api.deleteBook(id);
+        showSuccess('Buku dihapus');
+        loadBooks();
+        loadCategories();
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    // ---------------- Peminjaman ----------------
+    async function loadLoans() {
+      try {
+        const loans = await Api.listLoans();
+        const body = document.getElementById('loansBody');
+        body.innerHTML = '';
+        loans
+          .sort((a, b) => new Date(b.borrowedAt) - new Date(a.borrowedAt))
+          .forEach((loan) => {
+            const isBorrowed = loan.status === 'borrowed';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${escapeHtml(loan.bookTitle || '-')}</td>
+              <td>${escapeHtml(loan.userName || '-')}</td>
+              <td>${formatDate(loan.borrowedAt)}</td>
+              <td>${formatDate(loan.dueDate)}</td>
+              <td><span class="badge ${isBorrowed ? 'badge-borrowed' : 'badge-returned'}">${
+                isBorrowed ? 'Dipinjam' : 'Dikembalikan'
+              }</span></td>
+            `;
+            body.appendChild(tr);
+          });
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    loadCategories();
+    loadBooks();
+  </script>
+</body>
+</html>

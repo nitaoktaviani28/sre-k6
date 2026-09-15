@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Daftar - Perpustakaan Digital</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <div class="center-screen">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <span class="brand-badge">📚</span>
+        <h1>Buat Akun Baru</h1>
+        <p>Daftar sebagai anggota untuk mulai meminjam buku</p>
+      </div>
+
+      <div class="alert alert-error" id="errorAlert"></div>
+      <div class="alert alert-success" id="successAlert"></div>
+
+      <form id="registerForm">
+        <div class="form-group">
+          <label class="form-label" for="name">Nama Lengkap</label>
+          <input type="text" id="name" class="form-input" placeholder="Nama Anda" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="email">Email</label>
+          <input type="email" id="email" class="form-input" placeholder="nama@email.com" required autocomplete="username" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input type="password" id="password" class="form-input" placeholder="Minimal 6 karakter" required minlength="6" autocomplete="new-password" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="registerBtn">Daftar</button>
+      </form>
+
+      <p class="form-hint text-center" style="margin-top:18px;">
+        Sudah punya akun? <a href="login.html">Masuk di sini</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script>
+    if (Auth.isLoggedIn()) {
+      window.location.href = 'index.html';
+    }
+
+    const form = document.getElementById('registerForm');
+    const errorAlert = document.getElementById('errorAlert');
+    const successAlert = document.getElementById('successAlert');
+    const registerBtn = document.getElementById('registerBtn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorAlert.classList.remove('show');
+      successAlert.classList.remove('show');
+      registerBtn.disabled = true;
+      registerBtn.textContent = 'Memproses...';
+
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      try {
+        const { token, user } = await Api.register({ name, email, password });
+        Auth.setSession(token, user);
+        successAlert.textContent = 'Registrasi berhasil! Mengalihkan...';
+        successAlert.classList.add('show');
+        setTimeout(() => (window.location.href = 'index.html'), 700);
+      } catch (err) {
+        errorAlert.textContent = err.message;
+        errorAlert.classList.add('show');
+        registerBtn.disabled = false;
+        registerBtn.textContent = 'Daftar';
+      }
+    });
+  </script>
+</body>
+</html>
