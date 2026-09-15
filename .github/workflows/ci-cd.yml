@@ -8,8 +8,13 @@ name: CI/CD - Build, Push, Deploy
 #   2. push        -> push image ke Docker registry (hanya saat push ke main)
 #   3. deploy      -> SSH ke VM tujuan, pull image terbaru, `docker compose up -d`
 #
-# Kredensial / konfigurasi memakai GitHub Actions VARIABLES (Settings > Secrets
-# and variables > Actions > Variables), BUKAN Secrets. Ini dipilih sesuai
+# Nama image backend & frontend serta path deploy di VM di-hardcode langsung
+# di file ini (lihat blok `env:` di bawah). Tag image memakai `github.sha`
+# sehingga setiap build menghasilkan tag baru yang unik (image tidak pernah
+# tertimpa secara ambigu, dan VM selalu deploy versi yang sesuai commit).
+#
+# Kredensial memakai GitHub Actions VARIABLES (Settings > Secrets and
+# variables > Actions > Variables), BUKAN Secrets. Ini dipilih sesuai
 # permintaan agar mudah diisi & diubah, namun perlu diperhatikan:
 #
 #   ⚠️  Variables bersifat TIDAK terenkripsi dan bisa terlihat di log workflow
@@ -23,13 +28,10 @@ name: CI/CD - Build, Push, Deploy
 #   DOCKER_REGISTRY         contoh: docker.io  (atau ghcr.io)
 #   DOCKER_USERNAME         username akun registry
 #   DOCKER_PASSWORD         password / access token akun registry
-#   DOCKER_IMAGE_BACKEND    contoh: namauser/perpustakaan-backend
-#   DOCKER_IMAGE_FRONTEND   contoh: namauser/perpustakaan-frontend
 #   VM_HOST                 alamat IP / hostname VM tujuan deploy
 #   VM_USER                 username SSH di VM
 #   VM_SSH_PRIVATE_KEY      private key SSH (format PEM) untuk login ke VM
 #   VM_SSH_PORT             (opsional) port SSH, default 22
-#   VM_DEPLOY_PATH          path direktori project di VM, contoh: /opt/perpustakaan
 # ---------------------------------------------------------------------------
 
 on:
@@ -41,6 +43,13 @@ on:
 
 permissions:
   contents: read
+
+env:
+  # Nama image di-hardcode di sini. Ganti "namauser" sesuai akun registry Anda.
+  IMAGE_BACKEND: namauser/perpustakaan-backend
+  IMAGE_FRONTEND: namauser/perpustakaan-frontend
+  # Path direktori di VM tempat docker-compose.prod.yml disimpan & dijalankan.
+  VM_DEPLOY_PATH: /opt/perpustakaan-digital
 
 jobs:
   build:
@@ -106,25 +115,21 @@ jobs:
           username: ${{ vars.DOCKER_USERNAME }}
           password: ${{ vars.DOCKER_PASSWORD }}
 
-      - name: Build & push image backend
+      - name: Build & push image backend (tag: sha)
         uses: docker/build-push-action@v5
         with:
           context: ./backend
           file: ./backend/Dockerfile
           push: true
-          tags: |
-            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_IMAGE_BACKEND }}:${{ github.sha }}
-            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_IMAGE_BACKEND }}:latest
+          tags: ${{ vars.DOCKER_REGISTRY }}/${{ env.IMAGE_BACKEND }}:${{ github.sha }}
 
-      - name: Build & push image frontend
+      - name: Build & push image frontend (tag: sha)
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
-          tags: |
-            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_IMAGE_FRONTEND }}:${{ github.sha }}
-            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_IMAGE_FRONTEND }}:latest
+          tags: ${{ vars.DOCKER_REGISTRY }}/${{ env.IMAGE_FRONTEND }}:${{ github.sha }}
 
   deploy:
     name: Deploy to VM
@@ -143,10 +148,10 @@ jobs:
           key: ${{ vars.VM_SSH_PRIVATE_KEY }}
           port: ${{ vars.VM_SSH_PORT || 22 }}
           source: "docker-compose.prod.yml"
-          target: "${{ vars.VM_DEPLOY_PATH }}"
+          target: ${{ env.VM_DEPLOY_PATH }}
           strip_components: 0
 
-      - name: Deploy - pull image terbaru & restart container
+      - name: Deploy - pull image versi commit ini & restart container
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ vars.VM_HOST }}
@@ -155,13 +160,13 @@ jobs:
           port: ${{ vars.VM_SSH_PORT || 22 }}
           script: |
             set -e
-            cd "${{ vars.VM_DEPLOY_PATH }}"
+            cd "${{ env.VM_DEPLOY_PATH }}"
 
-            # Tulis ulang file .env dengan konfigurasi image terbaru
+            # Tulis ulang file .env dengan tag image sesuai commit SHA saat ini
             cat > .env <<EOF
             DOCKER_REGISTRY=${{ vars.DOCKER_REGISTRY }}
-            DOCKER_IMAGE_BACKEND=${{ vars.DOCKER_IMAGE_BACKEND }}
-            DOCKER_IMAGE_FRONTEND=${{ vars.DOCKER_IMAGE_FRONTEND }}
+            DOCKER_IMAGE_BACKEND=${{ env.IMAGE_BACKEND }}
+            DOCKER_IMAGE_FRONTEND=${{ env.IMAGE_FRONTEND }}
             IMAGE_TAG=${{ github.sha }}
             EOF
 
