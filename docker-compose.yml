@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: perpustakaan-backend:latest
+    container_name: perpustakaan-backend
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: perpustakaan-frontend:latest
+    container_name: perpustakaan-frontend
+    ports:
+      - "5500:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

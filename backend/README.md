@@ -19,6 +19,23 @@ Secara default server berjalan di `http://localhost:4000`. Untuk mengubah port:
 PORT=5000 node src/server.js
 ```
 
+### Menjalankan dengan Docker
+
+```bash
+cd backend
+docker build -t perpustakaan-backend .
+docker run -p 4000:4000 perpustakaan-backend
+```
+
+Atau ubah port yang dipetakan ke host:
+
+```bash
+docker run -p 5000:4000 -e PORT=4000 perpustakaan-backend
+```
+
+Lihat juga `docker-compose.yml` di root repo untuk menjalankan backend &
+frontend sekaligus.
+
 ## Struktur Proyek
 
 ```
