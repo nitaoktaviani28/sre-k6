@@ -40,6 +40,7 @@
   <script src="assets/js/api.js"></script>
   <script src="assets/js/nav.js"></script>
   <script>
+    Auth.requireLogin();
     renderNavbar('index');
 
     const bookGrid = document.getElementById('bookGrid');
@@ -88,7 +89,7 @@
         card.className = 'book-card';
         const available = book.stock > 0;
         card.innerHTML = `
-          <div class="book-cover">📖</div>
+          <div class="book-cover"><img src="${bookCoverSvg(book)}" alt="Sampul ${escapeHtml(book.title)}"></div>
           <span class="book-category">${escapeHtml(book.categoryName || 'Umum')}</span>
           <h3 class="book-title">${escapeHtml(book.title)}</h3>
           <p class="book-author">${escapeHtml(book.author)} ${book.year ? `&middot; ${book.year}` : ''}</p>
@@ -106,7 +107,7 @@
       });
 
       document.querySelectorAll('.borrow-btn').forEach((btn) => {
-        btn.addEventListener('click', () => borrowBook(Number(btn.dataset.id)));
+        btn.addEventListener('click', () => borrowBook(Number(btn.dataset.id), btn));
       });
     }
 
@@ -155,17 +156,32 @@
       }
     }
 
-    async function borrowBook(bookId) {
-      if (!Auth.isLoggedIn()) {
-        window.location.href = 'login.html';
-        return;
+    async function borrowBook(bookId, btn) {
+      const confirmed = await UI.confirm({
+        title: 'Pinjam Buku',
+        message: 'Anda yakin ingin meminjam buku ini? Buku akan tercatat pada peminjaman Anda.',
+        confirmText: 'Ya, Pinjam',
+        cancelText: 'Batal',
+      });
+      if (!confirmed) return;
+
+      const originalLabel = btn ? btn.textContent : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Memproses...';
       }
       try {
         await Api.borrowBook(bookId);
+        UI.toast('Buku berhasil dipinjam! Batas waktu 7 hari.', 'success');
         showSuccess('Buku berhasil dipinjam! Batas waktu 7 hari.');
         loadBooks();
       } catch (err) {
+        UI.toast(err.message, 'error');
         showError(err.message);
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = originalLabel;
+        }
       }
     }
 

@@ -1,0 +1,7 @@
+{
+  "task_id": "task-frontend-monochrome-redesign",
+  "task_description": "Frontend UI/UX redesign of the Perpustakaan Digital web app: make the app show LOGIN first and gate the catalog behind authentication; restyle the entire UI to a strictly black-and-white (monochrome) elegant theme; render a self-contained cover image for every book; and replace accidental/implicit actions with explicit buttons plus confirmation steps and clear feedback so the app is easier and more predictable to use. Frontend-only (plain HTML/CSS/vanilla JS), no backend contract changes.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null
+}

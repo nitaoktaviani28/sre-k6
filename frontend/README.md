@@ -2,7 +2,7 @@
 
 Frontend aplikasi Perpustakaan Buku. Dibangun dengan **HTML, CSS, dan
 JavaScript murni (vanilla)** — tanpa framework maupun proses build — dengan
-tema warna **biru muda & putih** yang profesional.
+tema warna **hitam & putih (monokrom)** yang profesional.
 
 ## Menjalankan
 
@@ -60,7 +60,7 @@ frontend/
 ├── admin.html
 └── assets/
     ├── css/
-    │   └── style.css      # tema biru muda & putih
+    │   └── style.css      # tema hitam & putih (monokrom)
     └── js/
         ├── config.js      # konfigurasi API_BASE_URL
         ├── api.js         # helper Auth + panggilan Api ke backend

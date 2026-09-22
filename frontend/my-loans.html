@@ -99,20 +99,39 @@
           });
 
         document.querySelectorAll('.return-btn').forEach((btn) => {
-          btn.addEventListener('click', () => returnLoan(Number(btn.dataset.id)));
+          btn.addEventListener('click', () => returnLoan(Number(btn.dataset.id), btn));
         });
       } catch (err) {
         showError(err.message);
       }
     }
 
-    async function returnLoan(id) {
+    async function returnLoan(id, btn) {
+      const confirmed = await UI.confirm({
+        title: 'Kembalikan Buku',
+        message: 'Kembalikan buku ini sekarang?',
+        confirmText: 'Ya, Kembalikan',
+        cancelText: 'Batal',
+      });
+      if (!confirmed) return;
+
+      const originalLabel = btn ? btn.textContent : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Memproses...';
+      }
       try {
         await Api.returnLoan(id);
+        UI.toast('Buku berhasil dikembalikan. Terima kasih!', 'success');
         showSuccess('Buku berhasil dikembalikan. Terima kasih!');
         loadLoans();
       } catch (err) {
+        UI.toast(err.message, 'error');
         showError(err.message);
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = originalLabel;
+        }
       }
     }
 
