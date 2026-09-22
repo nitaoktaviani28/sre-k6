@@ -41,8 +41,14 @@ const tokens = new Map();
 
 // ---- Seed data -------------------------------------------------------------------
 function seed() {
+  // 5 known accounts (2 admin + 3 member) so the k6 browser E2E scenario can
+  // log in as a distinct real user per VU. Passwords are kept simple/known on
+  // purpose (test seed data only).
   const adminPass = hashPassword('admin123');
+  const admin2Pass = hashPassword('admin123');
   const memberPass = hashPassword('budi123');
+  const sitiPass = hashPassword('siti123');
+  const andiPass = hashPassword('andi123');
 
   users.push(
     {
@@ -56,11 +62,38 @@ function seed() {
     },
     {
       id: nextUserId(),
+      name: 'Admin Dua',
+      email: 'admin2@perpus.id',
+      role: 'admin',
+      salt: admin2Pass.salt,
+      hash: admin2Pass.hash,
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: nextUserId(),
       name: 'Budi Santoso',
       email: 'budi@perpus.id',
       role: 'member',
       salt: memberPass.salt,
       hash: memberPass.hash,
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: nextUserId(),
+      name: 'Siti Aminah',
+      email: 'siti@perpus.id',
+      role: 'member',
+      salt: sitiPass.salt,
+      hash: sitiPass.hash,
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: nextUserId(),
+      name: 'Andi Wijaya',
+      email: 'andi@perpus.id',
+      role: 'member',
+      salt: andiPass.salt,
+      hash: andiPass.hash,
       createdAt: new Date().toISOString(),
     }
   );

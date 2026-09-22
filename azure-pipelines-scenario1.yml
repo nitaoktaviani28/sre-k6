@@ -1,0 +1,159 @@
+# =========================================================
+# SCENARIO 1 - Browser (Chromium) End-to-End UI test
+# =========================================================
+#
+# Self-contained pipeline: it spins the whole app up with docker compose,
+# waits for the backend to be healthy, runs the k6 browser E2E test
+# (k6/browser-e2e.js) against the live frontend, publishes the summary as an
+# artifact, then tears everything down.
+#
+# NOTE: this repo keeps ONE pipeline file per scenario. Scenario 2 (HTTP
+# load/stress/perf tests) will live in its own azure-pipelines-scenario2.yml,
+# created by duplicating this file and swapping the k6 script + image.
+# =========================================================
+
+# The reference build+deploy pipeline triggers on `master`. Our git default is
+# actually `main`, so change the branch below to `main` if that is what your
+# Azure DevOps repo uses.
+trigger:
+  branches:
+    include:
+      - master
+
+
+# =========================================================
+# VARIABLES
+# =========================================================
+
+variables:
+
+  # Where the app becomes reachable once docker compose is up.
+  - name: FRONTEND_URL
+    value: http://localhost:5500
+
+  - name: BACKEND_HEALTH_URL
+    value: http://localhost:4000/api/health
+
+  # k6 image that BUNDLES Chromium (required for the browser module).
+  - name: K6_BROWSER_IMAGE
+    value: grafana/k6:latest-with-browser
+
+  # k6 browser script + exported summary file.
+  - name: K6_SCRIPT
+    value: k6/browser-e2e.js
+
+  - name: K6_SUMMARY
+    value: k6-scenario1-summary.json
+
+
+# =========================================================
+# STAGE 1 - SCENARIO 1 BROWSER E2E
+# =========================================================
+
+stages:
+
+- stage: Scenario1E2E
+  displayName: "Scenario 1 - Browser E2E (2 admin + 3 member)"
+
+  jobs:
+
+  - job: RunBrowserE2E
+    displayName: "Spin up app, run k6 browser test, publish results"
+
+    pool:
+      vmImage: ubuntu-latest
+
+    steps:
+
+    # -----------------------------------------------------
+    # Checkout source code
+    # -----------------------------------------------------
+
+    - checkout: self
+      displayName: "Checkout Repository"
+
+
+    # -----------------------------------------------------
+    # Build & start the full app (backend + frontend) with docker compose.
+    # Frontend -> http://localhost:5500 , Backend -> http://localhost:4000
+    # -----------------------------------------------------
+
+    - script: |
+        docker compose up -d --build
+        docker compose ps
+      displayName: "Start App (docker compose up)"
+
+
+    # -----------------------------------------------------
+    # Readiness gate: poll the backend health endpoint until it is up so the
+    # browser test never starts before the API is serving requests.
+    # -----------------------------------------------------
+
+    - script: |
+        echo "Waiting for backend health at $(BACKEND_HEALTH_URL) ..."
+        for i in $(seq 1 30); do
+          if curl -fsS "$(BACKEND_HEALTH_URL)" > /dev/null; then
+            echo "Backend is up."
+            exit 0
+          fi
+          echo "  attempt $i/30 - not ready yet, retrying in 3s..."
+          sleep 3
+        done
+        echo "Backend did not become healthy in time."
+        docker compose logs
+        exit 1
+      displayName: "Wait for Backend Health"
+
+
+    # -----------------------------------------------------
+    # Run the k6 browser E2E test.
+    #  --network host  : so the container can reach localhost:5500 / :4000
+    #  -e BASE_URL     : points the script at the running frontend
+    #  K6_BROWSER_*    : headless + no-sandbox flags required in CI
+    #  -v ... -w /work : mount the repo so k6 can read the script
+    # -----------------------------------------------------
+
+    - script: |
+        docker run --rm --network host \
+          -e BASE_URL=$(FRONTEND_URL) \
+          -e K6_BROWSER_HEADLESS=true \
+          -e K6_BROWSER_ARGS=no-sandbox \
+          -v $(Build.SourcesDirectory):/work -w /work \
+          $(K6_BROWSER_IMAGE) run \
+          --summary-export=$(K6_SUMMARY) \
+          $(K6_SCRIPT)
+      displayName: "Run k6 Browser E2E Test"
+
+
+    # -----------------------------------------------------
+    # Dump compose logs for debugging (runs even if the test failed).
+    # -----------------------------------------------------
+
+    - script: |
+        echo "===== docker compose logs ====="
+        docker compose logs || true
+      displayName: "Dump App Logs"
+      condition: always()
+
+
+    # -----------------------------------------------------
+    # Publish the k6 summary JSON as a pipeline artifact.
+    # -----------------------------------------------------
+
+    - task: PublishPipelineArtifact@1
+      displayName: "Publish k6 Summary Artifact"
+      condition: always()
+      inputs:
+        targetPath: "$(Build.SourcesDirectory)/$(K6_SUMMARY)"
+        artifact: "scenario1-k6-summary"
+        publishLocation: "pipeline"
+
+
+    # -----------------------------------------------------
+    # Tear down the app and remove volumes (always).
+    # -----------------------------------------------------
+
+    - script: |
+        docker compose down -v || true
+      displayName: "Tear Down App (docker compose down)"
+      condition: always()
