@@ -188,7 +188,7 @@
         body.appendChild(tr);
       });
       document.querySelectorAll('.del-cat-btn').forEach((btn) => {
-        btn.addEventListener('click', () => deleteCategory(Number(btn.dataset.id)));
+        btn.addEventListener('click', () => deleteCategory(Number(btn.dataset.id), btn));
       });
     }
 
@@ -199,28 +199,55 @@
         .join('');
     }
 
-    document.getElementById('addCategoryBtn').addEventListener('click', async () => {
+    document.getElementById('addCategoryBtn').addEventListener('click', async (e) => {
       const input = document.getElementById('newCategoryInput');
       const name = input.value.trim();
       if (!name) return;
+      const btn = e.currentTarget;
+      const originalLabel = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Menyimpan...';
       try {
         await Api.createCategory({ name });
         input.value = '';
+        UI.toast('Kategori ditambahkan', 'success');
         showSuccess('Kategori ditambahkan');
         loadCategories();
       } catch (err) {
+        UI.toast(err.message, 'error');
         showError(err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalLabel;
       }
     });
 
-    async function deleteCategory(id) {
-      if (!confirm('Hapus kategori ini?')) return;
+    async function deleteCategory(id, btn) {
+      const confirmed = await UI.confirm({
+        title: 'Hapus Kategori',
+        message: 'Anda yakin ingin menghapus kategori ini? Tindakan ini tidak dapat dibatalkan.',
+        confirmText: 'Ya, Hapus',
+        cancelText: 'Batal',
+      });
+      if (!confirmed) return;
+
+      const originalLabel = btn ? btn.textContent : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Menghapus...';
+      }
       try {
         await Api.deleteCategory(id);
+        UI.toast('Kategori dihapus', 'success');
         showSuccess('Kategori dihapus');
         loadCategories();
       } catch (err) {
+        UI.toast(err.message, 'error');
         showError(err.message);
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = originalLabel;
+        }
       }
     }
 
@@ -249,7 +276,7 @@
           btn.addEventListener('click', () => openBookModal(Number(btn.dataset.id)));
         });
         document.querySelectorAll('.del-book-btn').forEach((btn) => {
-          btn.addEventListener('click', () => deleteBook(Number(btn.dataset.id)));
+          btn.addEventListener('click', () => deleteBook(Number(btn.dataset.id), btn));
         });
       } catch (err) {
         showError(err.message);
@@ -301,31 +328,69 @@
         synopsis: document.getElementById('bookSynopsis').value.trim(),
       };
 
+      if (id) {
+        const confirmed = await UI.confirm({
+          title: 'Simpan Perubahan',
+          message: 'Simpan perubahan pada data buku ini?',
+          confirmText: 'Ya, Simpan',
+          cancelText: 'Batal',
+        });
+        if (!confirmed) return;
+      }
+
+      const saveBtn = document.getElementById('saveBookBtn');
+      const originalLabel = saveBtn.textContent;
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Menyimpan...';
       try {
         if (id) {
           await Api.updateBook(Number(id), payload);
+          UI.toast('Buku diperbarui', 'success');
           showSuccess('Buku diperbarui');
         } else {
           await Api.createBook(payload);
+          UI.toast('Buku ditambahkan', 'success');
           showSuccess('Buku ditambahkan');
         }
         closeBookModal();
         loadBooks();
         loadCategories();
       } catch (err) {
+        UI.toast(err.message, 'error');
         showError(err.message);
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalLabel;
       }
     });
 
-    async function deleteBook(id) {
-      if (!confirm('Hapus buku ini?')) return;
+    async function deleteBook(id, btn) {
+      const confirmed = await UI.confirm({
+        title: 'Hapus Buku',
+        message: 'Anda yakin ingin menghapus buku ini? Tindakan ini tidak dapat dibatalkan.',
+        confirmText: 'Ya, Hapus',
+        cancelText: 'Batal',
+      });
+      if (!confirmed) return;
+
+      const originalLabel = btn ? btn.textContent : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Menghapus...';
+      }
       try {
         await Api.deleteBook(id);
+        UI.toast('Buku dihapus', 'success');
         showSuccess('Buku dihapus');
         loadBooks();
         loadCategories();
       } catch (err) {
+        UI.toast(err.message, 'error');
         showError(err.message);
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = originalLabel;
+        }
       }
     }
 

@@ -1,0 +1,23 @@
+{
+  "id": "FEAT-001",
+  "type": "chore",
+  "description": "Establish and verify the frontend baseline before making changes. The project has no build step and no automated tests, so this feature confirms the current pages are internally consistent and captures the working state so later changes can be validated the same way.",
+  "status": "completed",
+  "steps": [
+    "From the repo root /projects/sandbox/sre-k6, confirm the frontend directory layout: frontend/{index,login,register,my-loans,admin}.html and frontend/assets/{css/style.css, js/config.js, js/api.js, js/nav.js}.",
+    "Run `node --check frontend/assets/js/api.js`, `node --check frontend/assets/js/nav.js`, and `node --check frontend/assets/js/config.js` to confirm the existing JS assets are syntactically valid (baseline green).",
+    "Serve the frontend statically for a smoke test: `cd frontend && python3 -m http.server 5500` (run in background), then confirm login.html responds (e.g. `curl -s -o /dev/null -w '%{http_code}' http://localhost:5500/login.html` returns 200). Stop the server afterward.",
+    "Record in findings: the exact commands that work for JS syntax checking and static serving, and confirmation that the baseline is clean."
+  ],
+  "acceptance_criteria": [
+    "`node --check` passes on all three JS files under frontend/assets/js/ with no errors.",
+    "The static server serves login.html with HTTP 200.",
+    "findings documents the verified baseline commands for reuse in later features."
+  ],
+  "verification": [
+    "node --check frontend/assets/js/api.js && node --check frontend/assets/js/nav.js && node --check frontend/assets/js/config.js",
+    "cd frontend && python3 -m http.server 5500 & sleep 1 && curl -s -o /dev/null -w '%{http_code}' http://localhost:5500/login.html"
+  ],
+  "blocked_reason": null,
+  "findings": "Baseline verified clean on branch main. File layout confirmed: frontend/{index,login,register,my-loans,admin}.html and frontend/assets/{css/style.css, js/config.js, js/api.js, js/nav.js} all present. JS syntax check PASSED on all three assets. IMPORTANT ENV NOTE: the sandbox sets NODE_OPTIONS='--require /opt/amazon/kiro-agent/proxy-bootstrap.js', which points to a missing module and makes every `node` invocation fail with MODULE_NOT_FOUND. You MUST run `unset NODE_OPTIONS` (in the same shell/command) before any node command, otherwise it errors. Verified working commands: (1) JS syntax check -> `cd /projects/sandbox/sre-k6 && unset NODE_OPTIONS && node --check frontend/assets/js/api.js && node --check frontend/assets/js/nav.js && node --check frontend/assets/js/config.js` (output ALL_JS_OK). (2) Static serve + smoke test -> `cd /projects/sandbox/sre-k6/frontend && python3 -m http.server 5500 >/tmp/httpserver.log 2>&1 & then sleep 1.5 && curl -s -o /dev/null -w '%{http_code}' http://localhost:5500/login.html` returned 200; kill the background PID afterward to stop the server. No product files were modified in this feature (chore/baseline only). Only the .agents/ task-state directory is untracked (not committed as part of this feature)."
+}

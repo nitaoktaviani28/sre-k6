@@ -1,0 +1,28 @@
+{
+  "project_type": "Library / book-loan web app ('Perpustakaan Digital'). Static frontend (plain HTML/CSS/vanilla JS served by nginx) + separate Node.js REST backend (built-in http module, no external deps, in-memory data).",
+  "language": "JavaScript (vanilla, no framework), HTML5, CSS3; backend is Node.js (v22 available).",
+  "build_system": "None for frontend. No bundler, no npm build step. Frontend is static files. Backend runs with `node src/server.js`. Docker/compose exists but not needed for this frontend-only task.",
+  "test_framework": "None. There is no automated test suite in the repo.",
+  "build_command": "No frontend build. To smoke-test: `cd frontend && python3 -m http.server 5500` and open http://localhost:5500/login.html. Backend (optional, for full flow): `cd backend && node src/server.js` on port 4000.",
+  "test_command": "No automated tests. Verification is manual: serve the frontend, confirm pages load without JS console errors and the login-gated flow works. Static HTML/JS can also be sanity-checked with `node --check <file.js>` for the JS assets.",
+  "verification_instructions": "1) `node --check frontend/assets/js/api.js` and `node --check frontend/assets/js/nav.js` to catch JS syntax errors. 2) Serve frontend with python3 http.server and open each page (login, register, index, my-loans, admin) to confirm no console errors and the login gate redirects unauthenticated users to login.html. 3) Confirm every book card renders a cover image and the theme is strictly black/white. 4) Confirm borrow/return/delete/create actions require an explicit confirmation step before firing.",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "No dependency install needed for the frontend. For a full end-to-end manual check, run backend `node backend/src/server.js` (port 4000) and serve frontend via nginx/docker or python http.server. Demo accounts: admin@perpus.id/admin123, budi@perpus.id/budi123.",
+  "environment_constraints": "Frontend must remain plain HTML+CSS+vanilla JS: NO framework, NO bundler, NO npm packages. At app runtime assume NO guaranteed external internet, so book cover images must be self-contained (inline SVG / data-URI generated from book data) rather than remote image CDNs. API_BASE_URL is '/api' (relative; nginx proxies to backend in prod).",
+  "contribution_requirements": "Do NOT change backend request/response contracts unless strictly necessary. Preserve existing Api.* method names in api.js (extend, do not break). Do NOT push or open a PR (orchestrator handles that). Out of scope: any k6 load-testing work, /api/metrics, /api/test/reset.",
+  "key_patterns": "Pages load config.js -> api.js -> nav.js. `Auth` helper in api.js manages localStorage session (perpus_token/perpus_user) and already has requireLogin()/requireAdmin() redirect helpers (currently only used by my-loans.html and admin.html; index.html does NOT gate). `Api.*` methods map 1:1 to backend routes. nav.js renders shared navbar via renderNavbar(activePage) and defines global escapeHtml(). Pages show feedback via .alert-error/.alert-success divs toggled with .show class. Admin uses native confirm() for deletes; borrow on index fires immediately with no confirmation (the accidental-action complaint). Book object shape: {id,title,author,categoryId,categoryName,year,stock,totalStock,synopsis,createdAt} - NO cover image field.",
+  "relevant_files": [
+    "frontend/index.html (catalog; ungated; borrow button fires instantly - needs login gate + confirm)",
+    "frontend/login.html (landing/auth; already redirects to index if logged in)",
+    "frontend/register.html",
+    "frontend/my-loans.html (return action; needs confirm)",
+    "frontend/admin.html (book/category CRUD; delete uses confirm(), create/edit has none)",
+    "frontend/assets/css/style.css (ONLY stylesheet; currently blue/white theme -> rewrite to monochrome)",
+    "frontend/assets/js/api.js (Auth + Api wrappers; keep contracts; may add small cover/confirm/toast helpers)",
+    "frontend/assets/js/nav.js (shared navbar + escapeHtml)",
+    "frontend/assets/js/config.js (API_BASE_URL)",
+    "backend/src/db.js (seed data + book model - reference only; no cover field)",
+    "backend/src/routes/book-routes.js (book API - reference only)"
+  ],
+  "directory_structure": "sre-k6/frontend/ holds all UI (html pages at root, assets/css/style.css, assets/js/{config,api,nav}.js, nginx.conf, Dockerfile). sre-k6/backend/ holds the Node REST API (src/routes/*, src/db.js in-memory data). This task touches only frontend/ (no backend changes since cover images are generated client-side)."
+}

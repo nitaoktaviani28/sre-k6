@@ -3,7 +3,7 @@
 Aplikasi Perpustakaan Buku sederhana dengan arsitektur **frontend & backend
 terpisah** (bukan microservice) — satu backend REST API yang menyediakan
 beberapa endpoint (buku, kategori, peminjaman, autentikasi), dan satu frontend
-web dengan tema warna **biru muda & putih** yang bersih dan profesional.
+web dengan tema warna **hitam & putih (monokrom)** yang bersih dan profesional.
 
 ## Fitur Utama
 
@@ -11,7 +11,7 @@ web dengan tema warna **biru muda & putih** yang bersih dan profesional.
 - 📚 **Katalog buku** — cari, filter kategori, lihat sinopsis & ketersediaan stok
 - 🔄 **Peminjaman & pengembalian buku** oleh anggota
 - 🛠️ **Panel admin** — kelola buku, kelola kategori, pantau seluruh peminjaman
-- 🎨 UI bertema biru muda & putih, responsif, tanpa framework
+- 🎨 UI bertema hitam & putih (monokrom), responsif, tanpa framework
 
 ## Struktur Repo
 

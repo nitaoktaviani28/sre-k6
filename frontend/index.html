@@ -40,8 +40,10 @@
   <script src="assets/js/api.js"></script>
   <script src="assets/js/nav.js"></script>
   <script>
+    // Gate: redirect anonymous visitors to login.html (requireLogin sets
+    // window.location.href). Guard the catalog bootstrap so no authless API
+    // request fires before the browser navigates away.
     Auth.requireLogin();
-    renderNavbar('index');
 
     const bookGrid = document.getElementById('bookGrid');
     const emptyState = document.getElementById('emptyState');
@@ -90,11 +92,7 @@
         const available = book.stock > 0;
         const category = book.categoryName || 'Umum';
         card.innerHTML = `
-          <div class="book-cover" data-category="${escapeHtml(category)}">
-            <span class="book-cover-mark">✦</span>
-            <strong>${escapeHtml(book.title)}</strong>
-            <small>${escapeHtml(category)}</small>
-          </div>
+          <div class="book-cover"><img src="${bookCoverSvg(book)}" alt="Sampul ${escapeHtml(book.title)}"></div>
           <span class="book-category">${escapeHtml(category)}</span>
           <h3 class="book-title">${escapeHtml(book.title)}</h3>
           <p class="book-author">${escapeHtml(book.author)} ${book.year ? `&middot; ${book.year}` : ''}</p>
@@ -112,7 +110,7 @@
       });
 
       document.querySelectorAll('.borrow-btn').forEach((btn) => {
-        btn.addEventListener('click', () => borrowBook(Number(btn.dataset.id)));
+        btn.addEventListener('click', () => borrowBook(Number(btn.dataset.id), btn));
       });
     }
 
@@ -161,17 +159,32 @@
       }
     }
 
-    async function borrowBook(bookId) {
-      if (!Auth.isLoggedIn()) {
-        window.location.href = 'login.html';
-        return;
+    async function borrowBook(bookId, btn) {
+      const confirmed = await UI.confirm({
+        title: 'Pinjam Buku',
+        message: 'Anda yakin ingin meminjam buku ini? Buku akan tercatat pada peminjaman Anda.',
+        confirmText: 'Ya, Pinjam',
+        cancelText: 'Batal',
+      });
+      if (!confirmed) return;
+
+      const originalLabel = btn ? btn.textContent : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Memproses...';
       }
       try {
         await Api.borrowBook(bookId);
+        UI.toast('Buku berhasil dipinjam! Batas waktu 7 hari.', 'success');
         showSuccess('Buku berhasil dipinjam! Batas waktu 7 hari.');
         loadBooks();
       } catch (err) {
+        UI.toast(err.message, 'error');
         showError(err.message);
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = originalLabel;
+        }
       }
     }
 
@@ -188,8 +201,14 @@
       loadBooks();
     });
 
-    loadCategories();
-    loadBooks();
+    // Only bootstrap the catalog for authenticated users. If there is no
+    // session, Auth.requireLogin() above already scheduled the redirect, so we
+    // skip renderNavbar/loadCategories/loadBooks to avoid stray authless calls.
+    if (Auth.isLoggedIn()) {
+      renderNavbar('index');
+      loadCategories();
+      loadBooks();
+    }
   </script>
 </body>
 </html>
