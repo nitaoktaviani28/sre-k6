@@ -1,278 +1,129 @@
-trigger:
-  branches:
-    include:
-      - master
+name: CI/CD
 
-# =========================================================
-# VARIABLES
-# =========================================================
+on:
+  push:
+    branches:
+      - main
 
-variables:
-  - group: 22-Sep
+jobs:
 
-  # Docker Hub image
-  - name: BACKEND_IMAGE
-    value: haechanlovelove/perpustakaan-backend
-
-  - name: FRONTEND_IMAGE
-    value: haechanlovelove/perpustakaan-frontend
-
-  # Image tag
-  - name: IMAGE_TAG
-    value: v1
-
-  # Deployment directory on EC2
-  - name: DEPLOY_PATH
-    value: /opt/perpustakaan-digital
-
-
-# =========================================================
-# STAGE 1 - BUILD & PUSH
-# =========================================================
-
-stages:
-
-- stage: BuildAndPush
-  displayName: "Build & Push Docker Images"
-
-  jobs:
-
-  - job: DockerBuildPush
-    displayName: "Build and Push Backend & Frontend"
-
-    pool:
-      vmImage: ubuntu-latest
+  # ==========================================
+  # BUILD & PUSH DOCKER IMAGE
+  # ==========================================
+  build-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
 
     steps:
 
-    # -----------------------------------------------------
-    # Checkout source code
-    # -----------------------------------------------------
+      # Checkout source code
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - checkout: self
-      displayName: "Checkout Repository"
+      # Login Docker Hub
+      - name: Login Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
+      # ==========================================
+      # BACKEND
+      # ==========================================
+      - name: Build Backend
+        run: |
+          docker build \
+            -t haechanlovelove/perpustakaan-backend:v1 \
+            ./backend
 
-    # -----------------------------------------------------
-    # Login Docker Hub
-    # -----------------------------------------------------
+      - name: Push Backend
+        run: |
+          docker push \
+            haechanlovelove/perpustakaan-backend:v1
 
-    - script: |
-        echo "$(DOCKER_PASSWORD)" | docker login \
-          -u "$(DOCKER_USERNAME)" \
-          --password-stdin
-      displayName: "Login to Docker Hub"
+      # ==========================================
+      # FRONTEND
+      # ==========================================
+      - name: Build Frontend
+        run: |
+          docker build \
+            -t haechanlovelove/perpustakaan-frontend:v1 \
+            ./frontend
 
-
-    # -----------------------------------------------------
-    # Build Backend
-    # -----------------------------------------------------
-
-    - script: |
-        docker build \
-          -t $(BACKEND_IMAGE):$(IMAGE_TAG) \
-          -t $(BACKEND_IMAGE):latest \
-          ./backend
-      displayName: "Build Backend Image"
-
-
-    # -----------------------------------------------------
-    # Push Backend
-    # -----------------------------------------------------
-
-    - script: |
-        docker push $(BACKEND_IMAGE):$(IMAGE_TAG)
-        docker push $(BACKEND_IMAGE):latest
-      displayName: "Push Backend Image"
-
-
-    # -----------------------------------------------------
-    # Build Frontend
-    # -----------------------------------------------------
-
-    - script: |
-        docker build \
-          -t $(FRONTEND_IMAGE):$(IMAGE_TAG) \
-          -t $(FRONTEND_IMAGE):latest \
-          ./frontend
-      displayName: "Build Frontend Image"
+      - name: Push Frontend
+        run: |
+          docker push \
+            haechanlovelove/perpustakaan-frontend:v1
 
 
-    # -----------------------------------------------------
-    # Push Frontend
-    # -----------------------------------------------------
-
-    - script: |
-        docker push $(FRONTEND_IMAGE):$(IMAGE_TAG)
-        docker push $(FRONTEND_IMAGE):latest
-      displayName: "Push Frontend Image"
-
-
-# =========================================================
-# STAGE 2 - DEPLOY TO EC2
-# =========================================================
-
-- stage: Deploy
-  displayName: "Deploy to EC2"
-
-  dependsOn:
-    - BuildAndPush
-
-  condition: succeeded()
-
-  jobs:
-
-  - job: DeployToVM
-    displayName: "Deploy Application to EC2"
-
-    pool:
-      vmImage: ubuntu-latest
+  # ==========================================
+  # DEPLOY TO VM
+  # ==========================================
+  deploy:
+    name: Deploy to VM
+    needs: build-push
+    runs-on: ubuntu-latest
 
     steps:
 
-    # -----------------------------------------------------
-    # Checkout repository
-    # -----------------------------------------------------
+      # Checkout untuk mengambil docker-compose.prod.yml
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - checkout: self
-      displayName: "Checkout Repository"
+      # ==========================================
+      # COPY COMPOSE FILE TO VM
+      # ==========================================
+      - name: Copy docker-compose.prod.yml ke VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.VM_SSH_PORT || 22 }}
 
+          source: "docker-compose.prod.yml"
+          target: "/opt/perpustakaan-digital"
 
-    # -----------------------------------------------------
-    # Prepare SSH
-    # -----------------------------------------------------
+      # ==========================================
+      # DEPLOY
+      # ==========================================
+      - name: Deploy ke VM
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.VM_SSH_PORT || 22 }}
 
-    - script: |
+          script: |
+            set -e
 
-        echo "Preparing SSH configuration..."
+            cd /opt/perpustakaan-digital
 
-        mkdir -p ~/.ssh
+            echo "================================"
+            echo "Pull Backend Image"
+            echo "================================"
 
-        echo "$(VM_SSH_PRIVATE_KEY)" > ~/.ssh/id_rsa
+            docker pull haechanlovelove/perpustakaan-backend:v1
 
-        chmod 600 ~/.ssh/id_rsa
+            echo "================================"
+            echo "Pull Frontend Image"
+            echo "================================"
 
-        ssh-keyscan \
-          -p "$(VM_SSH_PORT)" \
-          "$(VM_HOST)" \
-          >> ~/.ssh/known_hosts
+            docker pull haechanlovelove/perpustakaan-frontend:v1
 
-        echo "SSH configuration completed."
+            echo "================================"
+            echo "Start Application"
+            echo "================================"
 
-      displayName: "Prepare SSH Key"
+            docker compose -f docker-compose.prod.yml up -d
 
+            echo "================================"
+            echo "Container Status"
+            echo "================================"
 
-    # -----------------------------------------------------
-    # Test SSH Connection
-    # -----------------------------------------------------
+            docker ps
 
-    - script: |
-
-        ssh \
-          -o StrictHostKeyChecking=yes \
-          -p "$(VM_SSH_PORT)" \
-          "$(VM_USER)@$(VM_HOST)" \
-          "echo 'SSH connection successful'"
-
-      displayName: "Test SSH Connection"
-
-
-    # -----------------------------------------------------
-    # Create deployment directory
-    # -----------------------------------------------------
-
-    - script: |
-
-        ssh \
-          -p "$(VM_SSH_PORT)" \
-          "$(VM_USER)@$(VM_HOST)" \
-          "mkdir -p $(DEPLOY_PATH)"
-
-      displayName: "Create Deployment Directory"
-
-
-    # -----------------------------------------------------
-    # Copy docker-compose.prod.yml
-    # -----------------------------------------------------
-
-    - script: |
-
-        scp \
-          -P "$(VM_SSH_PORT)" \
-          docker-compose.prod.yml \
-          "$(VM_USER)@$(VM_HOST):$(DEPLOY_PATH)/docker-compose.prod.yml"
-
-      displayName: "Copy Docker Compose to EC2"
-
-
-    # -----------------------------------------------------
-    # Deploy Application
-    # -----------------------------------------------------
-
-    - script: |
-
-        ssh \
-          -p "$(VM_SSH_PORT)" \
-          "$(VM_USER)@$(VM_HOST)" << 'EOF'
-
-        set -e
-
-        echo "========================================="
-        echo "Starting deployment..."
-        echo "========================================="
-
-        cd $(DEPLOY_PATH)
-
-        echo ""
-        echo "Pulling backend image..."
-        docker pull $(BACKEND_IMAGE):$(IMAGE_TAG)
-
-        echo ""
-        echo "Pulling frontend image..."
-        docker pull $(FRONTEND_IMAGE):$(IMAGE_TAG)
-
-        echo ""
-        echo "Stopping old containers if necessary..."
-        docker compose \
-          -f docker-compose.prod.yml \
-          down
-
-        echo ""
-        echo "Starting new containers..."
-        docker compose \
-          -f docker-compose.prod.yml \
-          up -d
-
-        echo ""
-        echo "========================================="
-        echo "Running containers:"
-        echo "========================================="
-
-        docker ps
-
-        echo ""
-        echo "========================================="
-        echo "Deployment completed successfully!"
-        echo "========================================="
-
-        EOF
-
-      displayName: "Deploy Application"
-
-
-    # -----------------------------------------------------
-    # Health Check
-    # -----------------------------------------------------
-
-    - script: |
-
-        echo "Waiting for application to start..."
-
-        sleep 10
-
-        ssh \
-          -p "$(VM_SSH_PORT)" \
-          "$(VM_USER)@$(VM_HOST)" \
-          "curl -f http://localhost:4000/api/health"
-
-      displayName: "Health Check"
+            echo "================================"
+            echo "Deploy v1 berhasil!"
+            echo "================================"
