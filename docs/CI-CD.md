@@ -58,30 +58,25 @@ dijalankan (edit langsung di file workflow, bagian paling atas `env:`).
 Tag image tetap dinamis memakai `${{ github.sha }}` sehingga setiap build
 menghasilkan image baru secara otomatis.
 
-## Konfigurasi yang wajib dibuat sebagai GitHub Actions Variable
+### Konfigurasi yang wajib dibuat sebagai GitHub Actions Secret
 
-Buka **Settings → Secrets and variables → Actions → Variables tab → New
-repository variable**, lalu buat variable berikut:
+Buka **Settings → Secrets and variables → Actions → Secrets tab → New
+repository secret**, lalu buat secret berikut:
 
 | Nama Variable | Contoh nilai | Keterangan |
 |---|---|---|
 | `DOCKER_REGISTRY` | `docker.io` | Bisa juga `ghcr.io` untuk GitHub Container Registry |
 | `DOCKER_USERNAME` | `namauser` | Username akun registry |
 | `DOCKER_PASSWORD` | `xxxxxxxx` | Password atau access token registry |
-| `VM_HOST` | `203.0.113.10` | IP/hostname VM tujuan deploy |
+| `VM_HOST` | `203.0.113.10` | IP/hostname publik VM tujuan deploy |
 | `VM_USER` | `deploy` | Username SSH di VM |
 | `VM_SSH_PRIVATE_KEY` | `-----BEGIN OPENSSH PRIVATE KEY-----...` | Private key SSH (format PEM) untuk login ke VM |
 | `VM_SSH_PORT` | `22` | (opsional) Port SSH, default 22 kalau tidak diisi |
 
-> **Catatan penting soal keamanan.** Anda meminta kredensial dibuat sebagai
-> **Variables**, bukan **Secrets** — ini sudah diikuti pada workflow ini.
-> Namun perlu diketahui bahwa GitHub Actions **Variables tidak dienkripsi**
-> dan **tidak otomatis di-mask** di log workflow (nilainya bisa terlihat plain
-> text kalau ada langkah yang mencetaknya). Untuk data sensitif seperti
-> `DOCKER_PASSWORD` dan `VM_SSH_PRIVATE_KEY`, sangat disarankan pindah ke tab
-> **Secrets** (bentuknya sama, tinggal ganti `vars.NAMA` jadi `secrets.NAMA`
-> di file workflow) supaya nilainya otomatis di-mask dan dienkripsi at-rest.
-> Silakan beri tahu saya kapan saja jika ingin saya migrasikan ke Secrets.
+> **Catatan penting soal keamanan.** Workflow menggunakan `secrets.NAMA`, jadi
+> semua nilai di atas harus dibuat pada tab **Secrets**. Secret terenkripsi dan
+> otomatis di-mask pada log, terutama untuk `DOCKER_PASSWORD` dan
+> `VM_SSH_PRIVATE_KEY`.
 
 ## Persiapan di sisi VM
 
