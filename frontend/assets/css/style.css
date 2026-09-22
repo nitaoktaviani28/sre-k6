@@ -1,28 +1,29 @@
 /* =========================================================
    Perpustakaan Digital - Shared Stylesheet
-   Tema: Biru muda & Putih (profesional, bersih)
+   Tema: Monokrom (hitam, putih, & abu-abu) - elegan, bersih
    ========================================================= */
 
 :root {
-  --color-primary: #2563eb;       /* biru utama */
-  --color-primary-dark: #1d4ed8;
-  --color-primary-light: #60a5fa; /* biru muda */
-  --color-primary-lighter: #eaf3ff; /* biru sangat muda untuk background */
-  --color-accent: #38bdf8;        /* biru langit (sky) */
+  --color-primary: #111111;         /* hitam utama (aksi/tekan) */
+  --color-primary-dark: #000000;
+  --color-primary-light: #333333;   /* abu gelap */
+  --color-primary-lighter: #f5f5f5; /* abu sangat terang untuk background halus */
+  --color-accent: #666666;          /* abu netral */
   --color-white: #ffffff;
-  --color-bg: #f4f9ff;
-  --color-text: #1e293b;
-  --color-muted: #64748b;
-  --color-border: #dbe7fb;
-  --color-success: #16a34a;
-  --color-success-bg: #ecfdf3;
-  --color-danger: #dc2626;
-  --color-danger-bg: #fef2f2;
-  --color-warning: #d97706;
-  --color-warning-bg: #fffbeb;
-  --shadow-sm: 0 1px 2px rgba(30, 64, 175, 0.06);
-  --shadow-md: 0 6px 16px rgba(30, 64, 175, 0.10);
-  --shadow-lg: 0 16px 40px rgba(30, 64, 175, 0.14);
+  --color-bg: #fafafa;
+  --color-text: #111111;
+  --color-muted: #666666;
+  --color-border: #e5e5e5;
+  --color-border-strong: #111111;
+  --color-success: #111111;         /* dibedakan lewat isian & border, bukan warna */
+  --color-success-bg: #f0f0f0;
+  --color-danger: #111111;
+  --color-danger-bg: #ffffff;
+  --color-warning: #333333;
+  --color-warning-bg: #f5f5f5;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.10);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.16);
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 20px;
@@ -47,7 +48,7 @@ body {
 }
 
 a {
-  color: var(--color-primary);
+  color: var(--color-text);
   text-decoration: none;
 }
 a:hover {
@@ -101,17 +102,18 @@ img, svg {
   font-weight: 700;
   font-size: 1.15rem;
   color: var(--color-primary-dark);
+  letter-spacing: 0.01em;
 }
 
 .brand-badge {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--color-primary-light), var(--color-primary));
+  background: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--color-white);
   font-size: 1.1rem;
 }
 
@@ -132,13 +134,13 @@ img, svg {
 
 .nav-links a:hover {
   background: var(--color-primary-lighter);
-  color: var(--color-primary-dark);
+  color: var(--color-text);
   text-decoration: none;
 }
 
 .nav-links a.active {
-  background: var(--color-primary-lighter);
-  color: var(--color-primary-dark);
+  background: var(--color-primary);
+  color: var(--color-white);
 }
 
 .nav-user {
@@ -230,7 +232,7 @@ img, svg {
 .form-input:focus, .form-select:focus, .form-textarea:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.12);
 }
 
 .form-textarea {
@@ -252,11 +254,11 @@ img, svg {
   gap: 8px;
   padding: 11px 20px;
   border-radius: var(--radius-sm);
-  border: none;
+  border: 1.5px solid transparent;
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.05s ease, box-shadow 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.05s ease, box-shadow 0.15s ease;
   font-family: inherit;
 }
 
@@ -265,12 +267,14 @@ img, svg {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--color-primary-light), var(--color-primary));
+  background: var(--color-primary);
   color: var(--color-white);
+  border-color: var(--color-primary);
   box-shadow: var(--shadow-sm);
 }
 .btn-primary:hover {
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  background: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
   box-shadow: var(--shadow-md);
 }
 
@@ -280,20 +284,24 @@ img, svg {
 
 .btn-outline {
   background: var(--color-white);
-  color: var(--color-primary-dark);
-  border: 1.5px solid var(--color-primary-light);
+  color: var(--color-text);
+  border: 1.5px solid var(--color-border-strong);
 }
 .btn-outline:hover {
   background: var(--color-primary-lighter);
 }
 
 .btn-danger {
-  background: var(--color-danger-bg);
-  color: var(--color-danger);
-  border: 1.5px solid #fecaca;
+  background: var(--color-white);
+  color: var(--color-text);
+  border: 2px solid var(--color-border-strong);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .btn-danger:hover {
-  background: #fee2e2;
+  background: var(--color-primary);
+  color: var(--color-white);
+  border-color: var(--color-primary);
 }
 
 .btn-sm {
@@ -302,7 +310,7 @@ img, svg {
 }
 
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
@@ -320,15 +328,17 @@ img, svg {
 }
 
 .alert-error {
-  background: var(--color-danger-bg);
-  color: var(--color-danger);
-  border: 1px solid #fecaca;
+  background: var(--color-white);
+  color: var(--color-text);
+  border: 2px solid var(--color-border-strong);
+  font-weight: 700;
 }
 
 .alert-success {
   background: var(--color-success-bg);
-  color: var(--color-success);
-  border: 1px solid #bbf7d0;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  font-weight: 500;
 }
 
 /* ---------------- Page header ---------------- */
@@ -377,12 +387,22 @@ img, svg {
   background: var(--color-white);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: 18px;
+  padding: 0;
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow: hidden;
   transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.book-card > *:not(.book-cover) {
+  margin-left: 18px;
+  margin-right: 18px;
+}
+
+.book-card > *:last-child {
+  margin-bottom: 18px;
 }
 
 .book-card:hover {
@@ -390,17 +410,27 @@ img, svg {
   transform: translateY(-2px);
 }
 
+/* Cover image sits at the top of the card, fixed portrait-ish aspect. */
 .book-cover {
   width: 100%;
-  height: 90px;
-  border-radius: var(--radius-sm);
-  background: linear-gradient(135deg, var(--color-primary-lighter), var(--color-primary-light));
+  height: 180px;
+  border-radius: 0;
+  background: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.8rem;
   color: var(--color-white);
-  margin-bottom: 6px;
+  margin: 0 0 6px;
+  overflow: hidden;
+}
+
+.book-cover img, .book-cover svg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(1);
+  display: block;
 }
 
 .book-category {
@@ -409,8 +439,9 @@ img, svg {
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: var(--color-primary-dark);
+  color: var(--color-text);
   background: var(--color-primary-lighter);
+  border: 1px solid var(--color-border);
   padding: 3px 9px;
   border-radius: 999px;
   align-self: flex-start;
@@ -448,16 +479,19 @@ img, svg {
   font-weight: 600;
   padding: 3px 9px;
   border-radius: 999px;
+  border: 1px solid var(--color-border-strong);
 }
 
 .stock-badge.available {
-  background: var(--color-success-bg);
-  color: var(--color-success);
+  background: var(--color-primary);
+  color: var(--color-white);
+  border-color: var(--color-primary);
 }
 
 .stock-badge.unavailable {
-  background: var(--color-danger-bg);
-  color: var(--color-danger);
+  background: var(--color-white);
+  color: var(--color-muted);
+  border-color: var(--color-border);
 }
 
 /* ---------------- Tables ---------------- */
@@ -476,7 +510,7 @@ table {
 
 thead th {
   background: var(--color-primary-lighter);
-  color: var(--color-primary-dark);
+  color: var(--color-text);
   text-align: left;
   padding: 12px 14px;
   font-weight: 700;
@@ -493,7 +527,7 @@ tbody td {
 }
 
 tbody tr:hover {
-  background: #fafcff;
+  background: var(--color-primary-lighter);
 }
 
 .badge {
@@ -502,25 +536,31 @@ tbody tr:hover {
   font-weight: 600;
   padding: 3px 10px;
   border-radius: 999px;
+  border: 1px solid var(--color-border);
 }
 
 .badge-borrowed {
-  background: var(--color-warning-bg);
-  color: var(--color-warning);
+  background: var(--color-white);
+  color: var(--color-text);
+  border: 1.5px solid var(--color-border-strong);
+  font-weight: 700;
 }
 
 .badge-returned {
   background: var(--color-success-bg);
-  color: var(--color-success);
+  color: var(--color-muted);
+  border-color: var(--color-border);
 }
 
 .badge-admin {
-  background: var(--color-primary-lighter);
-  color: var(--color-primary-dark);
+  background: var(--color-primary);
+  color: var(--color-white);
+  border-color: var(--color-primary);
 }
 .badge-member {
-  background: #f1f5f9;
+  background: var(--color-primary-lighter);
   color: var(--color-muted);
+  border-color: var(--color-border);
 }
 
 /* ---------------- Tabs ---------------- */
@@ -552,7 +592,7 @@ tbody tr:hover {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 33, 68, 0.45);
+  background: rgba(0, 0, 0, 0.55);
   display: none;
   align-items: center;
   justify-content: center;
@@ -571,6 +611,7 @@ tbody tr:hover {
   width: 100%;
   max-width: 480px;
   box-shadow: var(--shadow-lg);
+  border: 1px solid var(--color-border);
 }
 
 .modal h2 {
@@ -584,6 +625,82 @@ tbody tr:hover {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 20px;
+}
+
+/* ---------------- Confirmation dialog (reuses .modal-overlay) ---------------- */
+.confirm-dialog {
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  padding: 26px 28px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--color-border);
+}
+
+.confirm-dialog h2 {
+  margin: 0 0 10px;
+  font-size: 1.15rem;
+  color: var(--color-primary-dark);
+}
+
+.confirm-dialog p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.92rem;
+}
+
+.confirm-dialog .modal-actions {
+  margin-top: 22px;
+}
+
+/* ---------------- Toast / transient feedback ---------------- */
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 80;
+  pointer-events: none;
+}
+
+.toast {
+  min-width: 220px;
+  max-width: 340px;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  font-weight: 500;
+  background: var(--color-primary);
+  color: var(--color-white);
+  border: 1px solid var(--color-primary);
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: auto;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Error toast: inverted (white card with a strong dark border + bold text). */
+.toast.toast-error {
+  background: var(--color-white);
+  color: var(--color-text);
+  border: 2px solid var(--color-border-strong);
+  font-weight: 700;
+}
+
+/* Success toast: solid dark (default treatment, kept explicit for clarity). */
+.toast.toast-success {
+  background: var(--color-primary);
+  color: var(--color-white);
+  border-color: var(--color-primary);
 }
 
 /* ---------------- Footer ---------------- */
@@ -625,5 +742,12 @@ tbody tr:hover {
   }
   .nav-links {
     width: 100%;
+  }
+  .toast-container {
+    left: 20px;
+    right: 20px;
+  }
+  .toast {
+    max-width: none;
   }
 }
