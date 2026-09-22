@@ -40,6 +40,7 @@
   <script src="assets/js/api.js"></script>
   <script src="assets/js/nav.js"></script>
   <script>
+    Auth.requireLogin();
     renderNavbar('index');
 
     const bookGrid = document.getElementById('bookGrid');
@@ -87,9 +88,14 @@
         const card = document.createElement('div');
         card.className = 'book-card';
         const available = book.stock > 0;
+        const category = book.categoryName || 'Umum';
         card.innerHTML = `
-          <div class="book-cover">📖</div>
-          <span class="book-category">${escapeHtml(book.categoryName || 'Umum')}</span>
+          <div class="book-cover" data-category="${escapeHtml(category)}">
+            <span class="book-cover-mark">✦</span>
+            <strong>${escapeHtml(book.title)}</strong>
+            <small>${escapeHtml(category)}</small>
+          </div>
+          <span class="book-category">${escapeHtml(category)}</span>
           <h3 class="book-title">${escapeHtml(book.title)}</h3>
           <p class="book-author">${escapeHtml(book.author)} ${book.year ? `&middot; ${book.year}` : ''}</p>
           <p class="book-synopsis">${escapeHtml(book.synopsis || '')}</p>
@@ -97,7 +103,7 @@
             <span class="stock-badge ${available ? 'available' : 'unavailable'}">
               ${available ? `Tersedia (${book.stock})` : 'Stok habis'}
             </span>
-            <button class="btn btn-primary btn-sm borrow-btn" data-id="${book.id}" ${
+            <button class="btn btn-primary btn-sm borrow-btn" aria-label="Pinjam ${escapeHtml(book.title)}" data-id="${book.id}" ${
               available ? '' : 'disabled'
             }>Pinjam</button>
           </div>
