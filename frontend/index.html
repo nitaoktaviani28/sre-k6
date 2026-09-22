@@ -90,9 +90,10 @@
         const card = document.createElement('div');
         card.className = 'book-card';
         const available = book.stock > 0;
+        const category = book.categoryName || 'Umum';
         card.innerHTML = `
           <div class="book-cover"><img src="${bookCoverSvg(book)}" alt="Sampul ${escapeHtml(book.title)}"></div>
-          <span class="book-category">${escapeHtml(book.categoryName || 'Umum')}</span>
+          <span class="book-category">${escapeHtml(category)}</span>
           <h3 class="book-title">${escapeHtml(book.title)}</h3>
           <p class="book-author">${escapeHtml(book.author)} ${book.year ? `&middot; ${book.year}` : ''}</p>
           <p class="book-synopsis">${escapeHtml(book.synopsis || '')}</p>
@@ -100,7 +101,7 @@
             <span class="stock-badge ${available ? 'available' : 'unavailable'}">
               ${available ? `Tersedia (${book.stock})` : 'Stok habis'}
             </span>
-            <button class="btn btn-primary btn-sm borrow-btn" data-id="${book.id}" ${
+            <button class="btn btn-primary btn-sm borrow-btn" aria-label="Pinjam ${escapeHtml(book.title)}" data-id="${book.id}" ${
               available ? '' : 'disabled'
             }>Pinjam</button>
           </div>

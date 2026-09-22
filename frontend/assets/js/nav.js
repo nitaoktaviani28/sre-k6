@@ -7,6 +7,8 @@ function renderNavbar(activePage) {
   const mount = document.getElementById('navbar');
   if (!mount) return;
 
+  Auth.requireLogin();
+
   const user = Auth.getUser();
   const isAdmin = Auth.isAdmin();
 
