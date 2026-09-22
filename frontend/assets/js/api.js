@@ -218,6 +218,9 @@ function bookCoverSvg(book) {
 
 const UI = {
   _toastContainer: null,
+  // Jumlah dialog konfirmasi yang sedang terbuka. Dipakai agar keydown global
+  // (Enter/Escape) hanya memengaruhi dialog paling atas/terbaru.
+  _dialogCount: 0,
 
   /** Pastikan container toast tersedia (dibuat lazily). */
   _ensureToastContainer() {
@@ -286,6 +289,10 @@ const UI = {
         `</div></div>`;
 
       document.body.appendChild(overlay);
+      // Setiap dialog punya nomor urut; hanya yang terbaru (paling atas) yang
+      // boleh merespons Enter/Escape global agar dialog bertumpuk tidak ikut.
+      UI._dialogCount += 1;
+      const dialogLevel = UI._dialogCount;
       // Force reflow lalu tampilkan.
       requestAnimationFrame(() => overlay.classList.add('show'));
 
@@ -293,6 +300,7 @@ const UI = {
       const cleanup = (result) => {
         if (settled) return;
         settled = true;
+        UI._dialogCount -= 1;
         overlay.classList.remove('show');
         document.removeEventListener('keydown', onKey);
         setTimeout(() => {
@@ -302,6 +310,8 @@ const UI = {
       };
 
       const onKey = (e) => {
+        // Abaikan jika ada dialog lain yang lebih baru terbuka di atas dialog ini.
+        if (dialogLevel !== UI._dialogCount) return;
         if (e.key === 'Escape') cleanup(false);
         else if (e.key === 'Enter') cleanup(true);
       };

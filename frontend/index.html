@@ -40,8 +40,10 @@
   <script src="assets/js/api.js"></script>
   <script src="assets/js/nav.js"></script>
   <script>
+    // Gate: redirect anonymous visitors to login.html (requireLogin sets
+    // window.location.href). Guard the catalog bootstrap so no authless API
+    // request fires before the browser navigates away.
     Auth.requireLogin();
-    renderNavbar('index');
 
     const bookGrid = document.getElementById('bookGrid');
     const emptyState = document.getElementById('emptyState');
@@ -198,8 +200,14 @@
       loadBooks();
     });
 
-    loadCategories();
-    loadBooks();
+    // Only bootstrap the catalog for authenticated users. If there is no
+    // session, Auth.requireLogin() above already scheduled the redirect, so we
+    // skip renderNavbar/loadCategories/loadBooks to avoid stray authless calls.
+    if (Auth.isLoggedIn()) {
+      renderNavbar('index');
+      loadCategories();
+      loadBooks();
+    }
   </script>
 </body>
 </html>
